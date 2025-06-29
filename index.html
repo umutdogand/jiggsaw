@@ -63,7 +63,7 @@ let groupIdCounter = 0;
 
 const overlapRatio = 0.25; // overlap size ratio relative to piece size
 // (This is a silent placeholder — you can replace it with any base64 encoded snap sound)
-const snapAudio = new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg');
+const snapAudio = new Audio('images/default.jpg');
 function playSnapSound() {
   snapAudio.currentTime = 0;
   snapAudio.play();
@@ -497,7 +497,8 @@ canvas.addEventListener('touchstart', e => {
     const touch = e.touches[0];
     startDrag(touch.clientX - rect.left, touch.clientY - rect.top);
   }
-});
+}, { passive: false });
+
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
@@ -505,19 +506,21 @@ canvas.addEventListener('touchmove', e => {
     const touch = e.touches[0];
     dragMove(touch.clientX - rect.left, touch.clientY - rect.top);
   }
-});
+}, { passive: false });
+
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
   endDrag();
-});
+}, { passive: false });
+
 canvas.addEventListener('touchcancel', e => {
   e.preventDefault();
   endDrag();
-});
+}, { passive: false });
 
 
 // Initialize with a default image to start quickly:
-img.src = 'images/default.jpeg';
+img.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
 img.onload = () => {
   setupPuzzle();
 };
