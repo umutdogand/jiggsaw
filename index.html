@@ -475,26 +475,7 @@ function endDrag() {
   draggingGroup = null;
   draw();
 }
-
-// --- Mouse events ---
-canvas.addEventListener('mousedown', e => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  startDrag(e.clientX - rect.left, e.clientY - rect.top);
-});
-canvas.addEventListener('mousemove', e => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  dragMove(e.clientX - rect.left, e.clientY - rect.top);
-});
-canvas.addEventListener('mouseup', e => {
-  e.preventDefault();
-  endDrag();
-});
-canvas.addEventListener('mouseleave', e => {
-  e.preventDefault();
-  endDrag();
-});
+  
 function getCanvasCoordinates(event) {
   const rect = canvas.getBoundingClientRect(); // Get the canvas position and size
   const scaleX = canvas.width / rect.width;   // Horizontal scaling factor
@@ -515,6 +496,27 @@ function getCanvasCoordinates(event) {
     };
   }
 }
+  
+// --- Mouse events ---
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  const { x, y } = getCanvasCoordinates(e);
+  startDrag(x, y);
+});
+canvas.addEventListener('mousemove', e => {
+  e.preventDefault();
+  const { x, y } = getCanvasCoordinates(e);
+  dragMove(x, y);
+});
+canvas.addEventListener('mouseup', e => {
+  e.preventDefault();
+  endDrag();
+});
+canvas.addEventListener('mouseleave', e => {
+  e.preventDefault();
+  endDrag();
+});
+
 // --- Touch events ---
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
