@@ -28,7 +28,6 @@
     touch-action: none;
     max-width: 95vw;
     max-height: 75vh;
-    display: block;
   }
   #upload, #reset {
     margin: 10px;
@@ -41,12 +40,11 @@
 <input type="file" id="upload" accept="image/*" />
 <button id="reset">Reset Puzzle</button>
 <br />
-<canvas id="puzzleCanvas"></canvas>
+<canvas id="puzzleCanvas" width="1000" height="800"></canvas>
 
 <script>
 const canvas = document.getElementById('puzzleCanvas');
-let ctx;
-
+const ctx = canvas.getContext('2d');
 const upload = document.getElementById('upload');
 const reset = document.getElementById('reset');
 
@@ -63,49 +61,74 @@ let offsetX = 0;
 let offsetY = 0;
 let groupIdCounter = 0;
 
-const overlapRatio = 0.25;
+const overlapRatio = 0.25; // overlap size ratio relative to piece size
+// (This is a silent placeholder — you can replace it with any base64 encoded snap sound)
 const snapAudio = new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg');
 function playSnapSound() {
   snapAudio.currentTime = 0;
   snapAudio.play();
 }
+// Add this after your existing event listeners:
+
+canvas.addEventListener('dblclick', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Find the topmost piece under double click
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const p = pieces[i];
+    if (
+      x >= p.x &&
+      x <= p.x + pieceWidth + 2 * overlap &&
+      y >= p.y &&
+      y <= p.y + pieceHeight + 2 * overlap &&
+      !p.placed
+    ) {
+      // Ungroup this piece by assigning new unique group ID
+      p.group = ++groupIdCounter;
+      draw();
+      break;
+    }
+  }
+});
+
+upload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      img.onload = () => {
+        setupPuzzle();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+reset.addEventListener('click', () => {
+  pieces.forEach(p => {
+    const pos = getRandomPositionOutsideImage(overlap);
+    p.x = pos.x;
+    p.y = pos.y;
+    p.group = groupIdCounter++;
+    p.placed = false;
+  });
+  draw();
+});
 
 let overlap;
-let desiredWidth;
-let desiredHeight;
 
-function setupHiDPICanvas(canvas, desiredWidth, desiredHeight) {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = desiredWidth * dpr;
-  canvas.height = desiredHeight * dpr;
-  canvas.style.width = desiredWidth + 'px';
-  canvas.style.height = desiredHeight + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-  return ctx;
-}
-
-function resizeCanvas() {
-  desiredWidth = Math.min(window.innerWidth * 0.95, 1000);
-  desiredHeight = Math.min(window.innerHeight * 0.75, 800);
-  ctx = setupHiDPICanvas(canvas, desiredWidth, desiredHeight);
-
-  if (img.complete && img.naturalWidth) {
-    setupPuzzle();
-  }
-}
-
-// Setup puzzle pieces and positions based on current canvas size
 function setupPuzzle() {
-  const maxW = desiredWidth * 0.8;
-  const maxH = desiredHeight * 0.8;
+  const maxW = canvas.width * 0.8;
+  const maxH = canvas.height * 0.8;
   const ratio = Math.min(maxW / img.width, maxH / img.height);
   imgW = img.width * ratio;
   imgH = img.height * ratio;
-  imgX = (desiredWidth - imgW) / 2;
-  imgY = (desiredHeight - imgH) / 2;
+  imgX = (canvas.width - imgW) / 2;
+  imgY = (canvas.height - imgH) / 2;
 
   pieceWidth = imgW / cols;
   pieceHeight = imgH / rows;
@@ -156,21 +179,21 @@ function getRandomPositionOutsideImage(overlap) {
   } else if (side === 1) {
     // Below image
     x = Math.random() * (imgX + imgW - pieceWidth) + imgX - overlap;
-    y = imgY + imgH + Math.random() * (desiredHeight - (imgY + imgH) - pieceHeight) + overlap / 2;
+    y = imgY + imgH + Math.random() * (canvas.height - (imgY + imgH) - pieceHeight) + overlap / 2;
   } else if (side === 2) {
     // Left of image
     x = Math.random() * (imgX - pieceWidth - overlap) + overlap / 2;
-    y = Math.random() * (desiredHeight - pieceHeight);
+    y = Math.random() * (canvas.height - pieceHeight);
   } else {
     // Right of image
-    x = imgX + imgW + Math.random() * (desiredWidth - (imgX + imgW) - pieceWidth) + overlap / 2;
-    y = Math.random() * (desiredHeight - pieceHeight);
+    x = imgX + imgW + Math.random() * (canvas.width - (imgX + imgW) - pieceWidth) + overlap / 2;
+    y = Math.random() * (canvas.height - pieceHeight);
   }
   return { x, y };
 }
 
 function draw() {
-  ctx.clearRect(0, 0, desiredWidth, desiredHeight);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw faint background image
   ctx.globalAlpha = 0.2;
@@ -183,6 +206,7 @@ function draw() {
     createPiecePath(p, p.x + overlap, p.y + overlap);
     ctx.clip();
 
+    // Calculate the image coordinates and size with overlap scaled to source image pixels
     const scaleX = img.width / imgW;
     const scaleY = img.height / imgH;
 
@@ -264,178 +288,249 @@ function createPiecePath(p, x, y) {
     );
     ctx.lineTo(x, y);
   }
-  ctx.closePath();
 }
 
-function pointInPiece(p, mx, my) {
-  ctx.beginPath();
-  createPiecePath(p, p.x + overlap, p.y + overlap);
-  return ctx.isPointInPath(mx, my);
+function getPieceAt(x, y) {
+  return pieces.find(p => p.gridX === x && p.gridY === y);
 }
 
-function findPieceAt(mx, my) {
+function arePiecesClose(p1, p2) {
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+
+  const expectedDx = (p1.gridX - p2.gridX) * pieceWidth;
+  const expectedDy = (p1.gridY - p2.gridY) * pieceHeight;
+
+  const tolerance = Math.min(pieceWidth, pieceHeight) / 4;
+  return Math.abs(dx - expectedDx) < tolerance && Math.abs(dy - expectedDy) < tolerance;
+}
+
+function snapAndMergeGroups(groupId) {
+  let changed;
+  let playedSound = false; 
+  do {
+    changed = false;
+    const groupPieces = pieces.filter(p => p.group === groupId);
+
+    for (const p of groupPieces) {
+      const neighbors = [];
+      if (p.gridY > 0) neighbors.push(getPieceAt(p.gridX, p.gridY - 1));
+      if (p.gridX < cols - 1) neighbors.push(getPieceAt(p.gridX + 1, p.gridY));
+      if (p.gridY < rows - 1) neighbors.push(getPieceAt(p.gridX, p.gridY + 1));
+      if (p.gridX > 0) neighbors.push(getPieceAt(p.gridX - 1, p.gridY));
+
+      for (const n of neighbors) {
+        if (!n) continue;
+        if (n.group !== p.group) {
+          if (arePiecesClose(p, n)) {
+            const oldGroup = n.group;
+            pieces.forEach(piece => {
+              if (piece.group === oldGroup) piece.group = p.group;
+            });
+            changed = true;
+            if (!playedSound) {
+              playSnapSound();
+              playedSound = true;
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
+
+  // Check if all pieces in group are near home, then snap in place
+  const finalGroupPieces = pieces.filter(p => p.group === groupId);
+  const allPlaced = finalGroupPieces.every(p =>
+    Math.abs(p.x - p.homeX) < pieceWidth / 5 &&
+    Math.abs(p.y - p.homeY) < pieceHeight / 5
+  );
+
+  if (allPlaced) {
+    finalGroupPieces.forEach(p => {
+      p.x = p.homeX;
+      p.y = p.homeY;
+      p.placed = true;
+    });
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.globalAlpha = 0.2;
+  ctx.drawImage(img, 0, 0, img.width, img.height, imgX, imgY, imgW, imgH);
+  ctx.globalAlpha = 1;
+
+  // Draw all pieces
+  pieces.forEach(p => {
+    ctx.save();
+    ctx.beginPath();
+    createPiecePath(p, p.x + overlap, p.y + overlap);
+    ctx.clip();
+
+    const scaleX = img.width / imgW;
+    const scaleY = img.height / imgH;
+
+    ctx.drawImage(
+      img,
+      p.sx - overlap * scaleX,
+      p.sy - overlap * scaleY,
+      img.width / cols + 2 * overlap * scaleX,
+      img.height / rows + 2 * overlap * scaleY,
+      p.x,
+      p.y,
+      pieceWidth + 2 * overlap,
+      pieceHeight + 2 * overlap
+    );
+
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+// --- Dragging & Touch ---
+
+function findPieceAtPosition(x, y) {
+  // Iterate backward so we get topmost piece
   for (let i = pieces.length - 1; i >= 0; i--) {
-    if (pointInPiece(pieces[i], mx, my)) {
-      return pieces[i];
+    const p = pieces[i];
+    if (
+      x >= p.x &&
+      x <= p.x + pieceWidth + 2 * overlap &&
+      y >= p.y &&
+      y <= p.y + pieceHeight + 2 * overlap &&
+      !p.placed
+    ) {
+      return p;
     }
   }
   return null;
 }
 
-function onPointerDown(e) {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX || e.touches[0].clientX) - rect.left;
-  const my = (e.clientY || e.touches[0].clientY) - rect.top;
-
-  const p = findPieceAt(mx, my);
-  if (p) {
-    draggingGroup = p.group;
-    draggingPiece = pieces.filter(pc => pc.group === draggingGroup);
-
-    offsetX = mx - draggingPiece[0].x;
-    offsetY = my - draggingPiece[0].y;
-
-    // Bring group to front
-    pieces = pieces.filter(pc => pc.group !== draggingGroup).concat(draggingPiece);
-  }
+function getGroupPieces(group) {
+  return pieces.filter(p => p.group === group && !p.placed);
 }
 
-function onPointerMove(e) {
-  if (!draggingPiece) return;
-  e.preventDefault();
+function startDrag(x, y) {
+  const piece = findPieceAtPosition(x, y);
+  if (!piece) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX || e.touches[0].clientX) - rect.left;
-  const my = (e.clientY || e.touches[0].clientY) - rect.top;
+  draggingPiece = piece;
+  draggingGroup = piece.group;
 
-  const dx = mx - offsetX;
-  const dy = my - offsetY;
+  const groupPieces = getGroupPieces(draggingGroup);
+  offsetX = x - draggingPiece.x;
+  offsetY = y - draggingPiece.y;
 
-  // Move all pieces in group together
-  draggingPiece.forEach(p => {
-    p.x += dx - p.x + p.x; // corrected below:
+  // Move dragged group pieces to front (end of array)
+  groupPieces.forEach(p => {
+    const idx = pieces.indexOf(p);
+    if (idx > -1) {
+      pieces.splice(idx, 1);
+      pieces.push(p);
+    }
   });
-
-  // Correction: we want to move all pieces by delta (dx - previous x of draggingPiece[0])
-  const deltaX = dx - draggingPiece[0].x;
-  const deltaY = dy - draggingPiece[0].y;
-  draggingPiece.forEach(p => {
-    p.x += deltaX;
-    p.y += deltaY;
-  });
-
-  draw();
 }
 
-function onPointerUp(e) {
+function dragMove(x, y) {
   if (!draggingPiece) return;
-  e.preventDefault();
 
-  // Check for snapping pieces in groups
-  let anySnapped = false;
-  draggingPiece.forEach(p => {
-    if (p.placed) return; // already placed
+  const dx = x - offsetX;
+  const dy = y - offsetY;
 
-    const neighbors = getNeighbors(p);
-    neighbors.forEach(n => {
-      if (n.group === p.group) return; // same group already
-      if (isClose(p, n)) {
-        // Snap n to p and join groups
-        joinGroups(p, n);
-        anySnapped = true;
-        playSnapSound();
-      }
+  const groupPieces = getGroupPieces(draggingGroup);
+
+  // Calculate group bounding box offset relative to dragged piece
+  const baseX = draggingPiece.x;
+  const baseY = draggingPiece.y;
+  const offsetGroup = groupPieces.map(p => ({
+    p,
+    ox: p.x - baseX,
+    oy: p.y - baseY
+  }));
+
+  offsetGroup.forEach(({p, ox, oy}) => {
+    p.x = dx + ox;
+    p.y = dy + oy;
+  });
+
+  // Throttle redraws for better performance
+  if (!draggingPiece.throttle) {
+    draggingPiece.throttle = true;
+    requestAnimationFrame(() => {
+      draw();
+      draggingPiece.throttle = false;
     });
-  });
-
-  // Check if all placed
-  if (pieces.every(p => p.placed)) {
-    setTimeout(() => alert('Congratulations! Puzzle solved! 🎉'), 100);
   }
+}
+
+function endDrag() {
+  if (!draggingPiece) return;
+
+  snapAndMergeGroups(draggingGroup);
 
   draggingPiece = null;
   draggingGroup = null;
   draw();
 }
 
-function getNeighbors(piece) {
-  const neighbors = [];
-  const directions = [
-    {dx: 0, dy: -1, side: 'top', oppSide: 'bottom'},
-    {dx: 1, dy: 0, side: 'right', oppSide: 'left'},
-    {dx: 0, dy: 1, side: 'bottom', oppSide: 'top'},
-    {dx: -1, dy: 0, side: 'left', oppSide: 'right'}
-  ];
-  directions.forEach(d => {
-    const nx = piece.gridX + d.dx;
-    const ny = piece.gridY + d.dy;
-    if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
-      const neighbor = pieces.find(p => p.gridX === nx && p.gridY === ny);
-      if (neighbor) neighbors.push(neighbor);
-    }
-  });
-  return neighbors;
-}
-
-function isClose(p1, p2) {
-  const dx = p1.x - p2.x + (p1.gridX - p2.gridX) * pieceWidth;
-  const dy = p1.y - p2.y + (p1.gridY - p2.gridY) * pieceHeight;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  return dist < pieceWidth / 3;
-}
-
-function joinGroups(p1, p2) {
-  const oldGroup = p2.group;
-  const newGroup = p1.group;
-  if (oldGroup === newGroup) return;
-
-  // Calculate offset between p1 and p2 in pieces coords
-  const offsetX = p1.x - p2.x + (p1.gridX - p2.gridX) * pieceWidth;
-  const offsetY = p1.y - p2.y + (p1.gridY - p2.gridY) * pieceHeight;
-
-  // Reposition all pieces in old group relative to new group's position
-  pieces.forEach(p => {
-    if (p.group === oldGroup) {
-      p.x += offsetX;
-      p.y += offsetY;
-      p.group = newGroup;
-    }
-  });
-}
-
-upload.addEventListener('change', e => {
-  if (e.target.files.length === 0) return;
-  const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    img = new Image();
-    img.onload = function() {
-      setupPuzzle();
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+// --- Mouse events ---
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  startDrag(e.clientX - rect.left, e.clientY - rect.top);
+});
+canvas.addEventListener('mousemove', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  dragMove(e.clientX - rect.left, e.clientY - rect.top);
+});
+canvas.addEventListener('mouseup', e => {
+  e.preventDefault();
+  endDrag();
+});
+canvas.addEventListener('mouseleave', e => {
+  e.preventDefault();
+  endDrag();
 });
 
-reset.addEventListener('click', () => {
-  if (!img.complete || !img.naturalWidth) return;
+// --- Touch events ---
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    startDrag(touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    dragMove(touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  endDrag();
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', e => {
+  e.preventDefault();
+  endDrag();
+}, { passive: false });
+
+
+// Initialize with a default image to start quickly:
+img.src = 'images/default.jpeg'; 
+img.onload = () => {
   setupPuzzle();
-});
-
-window.addEventListener('resize', () => {
-  resizeCanvas();
-});
-
-canvas.addEventListener('pointerdown', onPointerDown);
-canvas.addEventListener('pointermove', onPointerMove);
-canvas.addEventListener('pointerup', onPointerUp);
-canvas.addEventListener('pointerleave', onPointerUp);
-canvas.addEventListener('touchstart', onPointerDown);
-canvas.addEventListener('touchmove', onPointerMove);
-canvas.addEventListener('touchend', onPointerUp);
-
-resizeCanvas();
+};
 </script>
 
 </body>
