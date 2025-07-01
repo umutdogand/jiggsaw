@@ -495,14 +495,31 @@ canvas.addEventListener('mouseleave', e => {
   e.preventDefault();
   endDrag();
 });
+function getCanvasCoordinates(event) {
+  const rect = canvas.getBoundingClientRect(); // Get the canvas position and size
+  const scaleX = canvas.width / rect.width;   // Horizontal scaling factor
+  const scaleY = canvas.height / rect.height; // Vertical scaling factor
 
+  if (event.touches && event.touches.length > 0) {
+    // For touch events
+    const touch = event.touches[0];
+    return {
+      x: (touch.clientX - rect.left) * scaleX,
+      y: (touch.clientY - rect.top) * scaleY
+    };
+  } else {
+    // For mouse events
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY
+    };
+  }
+}
 // --- Touch events ---
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
-    const touch = e.touches[0];
-    const x = touch.pageX - canvas.offsetLeft;
-    const y = touch.pageY - canvas.offsetTop;
+    const { x, y } = getCanvasCoordinates(e);
     startDrag(x, y);
   }
 }, { passive: false });
@@ -511,8 +528,7 @@ canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
     const touch = e.touches[0];
-    const x = touch.pageX - canvas.offsetLeft;
-    const y = touch.pageY - canvas.offsetTop;
+      const { x, y } = getCanvasCoordinates(e);
     dragMove(x, y);
   }
 }, { passive: false });
