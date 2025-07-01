@@ -518,16 +518,15 @@ canvas.addEventListener('mouseleave', e => {
 });
 
 // --- Touch events ---
+let lastTouchTime = 0;
+
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  if (e.touches.length === 1) {
-    const { x, y } = getCanvasCoordinates(e);
-   
 
   const currentTime = new Date().getTime();
   const timeSinceLastTouch = currentTime - lastTouchTime;
-
-  if (timeSinceLastTouch < 300 && e.touches.length === 1) { 
+  const { x, y } = getCanvasCoordinates(e);
+  if (timeSinceLastTouch < 300 && e.touches.length === 1) {
     // Find the topmost piece under double touch
     for (let i = pieces.length - 1; i >= 0; i--) {
       const p = pieces[i];
@@ -544,12 +543,12 @@ canvas.addEventListener('touchstart', e => {
         break;
       }
     }
-  }else if (e.touches.length === 1) {
-     startDrag(x, y);
+  } else if (e.touches.length === 1) {
+    
+    startDrag(x, y);
   }
 
   lastTouchTime = currentTime;
-}
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
