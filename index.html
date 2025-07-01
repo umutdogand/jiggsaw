@@ -353,43 +353,6 @@ function snapAndMergeGroups(groupId) {
     });
   }
 }
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.globalAlpha = 0.2;
-  ctx.drawImage(img, 0, 0, img.width, img.height, imgX, imgY, imgW, imgH);
-  ctx.globalAlpha = 1;
-
-  // Draw all pieces
-  pieces.forEach(p => {
-    ctx.save();
-    ctx.beginPath();
-    createPiecePath(p, p.x + overlap, p.y + overlap);
-    ctx.clip();
-
-    const scaleX = img.width / imgW;
-    const scaleY = img.height / imgH;
-
-    ctx.drawImage(
-      img,
-      p.sx - overlap * scaleX,
-      p.sy - overlap * scaleY,
-      img.width / cols + 2 * overlap * scaleX,
-      img.height / rows + 2 * overlap * scaleY,
-      p.x,
-      p.y,
-      pieceWidth + 2 * overlap,
-      pieceHeight + 2 * overlap
-    );
-
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  });
-}
-
 // --- Dragging & Touch ---
 
 function findPieceAtPosition(x, y) {
