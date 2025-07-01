@@ -500,18 +500,20 @@ canvas.addEventListener('mouseleave', e => {
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    startDrag(touch.clientX - rect.left, touch.clientY - rect.top);
+    const x = touch.pageX - canvas.offsetLeft;
+    const y = touch.pageY - canvas.offsetTop;
+    startDrag(x, y);
   }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    dragMove(touch.clientX - rect.left, touch.clientY - rect.top);
+    const x = touch.pageX - canvas.offsetLeft;
+    const y = touch.pageY - canvas.offsetTop;
+    dragMove(x, y);
   }
 }, { passive: false });
 
