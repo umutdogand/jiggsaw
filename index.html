@@ -421,7 +421,7 @@ function startDrag(x, y) {
   draggingGroup = piece.group;
 
   const groupPieces = getGroupPieces(draggingGroup);
-  offsetX = x - draggingPiece.x;
+  offsetX = x - draggingPiece.x; // Calculate the offset between touch point and piece's position
   offsetY = y - draggingPiece.y;
 
   // Move dragged group pieces to front (end of array)
@@ -437,7 +437,7 @@ function startDrag(x, y) {
 function dragMove(x, y) {
   if (!draggingPiece) return;
 
-  const dx = x - offsetX;
+  const dx = x - offsetX; // Apply the offset to calculate the new position
   const dy = y - offsetY;
 
   const groupPieces = getGroupPieces(draggingGroup);
@@ -451,8 +451,8 @@ function dragMove(x, y) {
     oy: p.y - baseY
   }));
 
-  offsetGroup.forEach(({p, ox, oy}) => {
-    p.x = dx + ox;
+  offsetGroup.forEach(({ p, ox, oy }) => {
+    p.x = dx + ox; // Update the position of each piece in the group
     p.y = dy + oy;
   });
 
