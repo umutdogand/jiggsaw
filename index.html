@@ -473,6 +473,8 @@ canvas.addEventListener('mouseleave', e => {
 });
 
 // --- Touch events ---
+let lastTouchTime = 0;
+
 
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
