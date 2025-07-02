@@ -72,9 +72,7 @@ function playSnapSound() {
 
 canvas.addEventListener('dblclick', e => {
   e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const { x, y } = getCanvasCoordinates(e);
 
   // Find the topmost piece under double click
   for (let i = pieces.length - 1; i >= 0; i--) {
@@ -353,6 +351,7 @@ function snapAndMergeGroups(groupId) {
     });
   }
 }
+
 // --- Dragging & Touch ---
 
 function findPieceAtPosition(x, y) {
@@ -384,7 +383,7 @@ function startDrag(x, y) {
   draggingGroup = piece.group;
 
   const groupPieces = getGroupPieces(draggingGroup);
-  offsetX = x - draggingPiece.x; // Calculate the offset between touch point and piece's position
+  offsetX = x - draggingPiece.x;
   offsetY = y - draggingPiece.y;
 
   // Move dragged group pieces to front (end of array)
@@ -400,7 +399,7 @@ function startDrag(x, y) {
 function dragMove(x, y) {
   if (!draggingPiece) return;
 
-  const dx = x - offsetX; // Apply the offset to calculate the new position
+  const dx = x - offsetX;
   const dy = y - offsetY;
 
   const groupPieces = getGroupPieces(draggingGroup);
@@ -414,19 +413,12 @@ function dragMove(x, y) {
     oy: p.y - baseY
   }));
 
-  offsetGroup.forEach(({ p, ox, oy }) => {
-    p.x = dx + ox; // Update the position of each piece in the group
+  offsetGroup.forEach(({p, ox, oy}) => {
+    p.x = dx + ox;
     p.y = dy + oy;
   });
 
-  // Throttle redraws for better performance
-  if (!draggingPiece.throttle) {
-    draggingPiece.throttle = true;
-    requestAnimationFrame(() => {
-      draw();
-      draggingPiece.throttle = false;
-    });
-  }
+  draw();
 }
 
 function endDrag() {
@@ -438,7 +430,7 @@ function endDrag() {
   draggingGroup = null;
   draw();
 }
-  
+
 function getCanvasCoordinates(event) {
   const rect = canvas.getBoundingClientRect(); // Get the canvas position and size
   const scaleX = canvas.width / rect.width;   // Horizontal scaling factor
@@ -486,32 +478,32 @@ let lastTouchTime = 0;
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
 
-  const currentTime = new Date().getTime();
-  const timeSinceLastTouch = currentTime - lastTouchTime;
+//   const currentTime = new Date().getTime();
+//   const timeSinceLastTouch = currentTime - lastTouchTime;
   const { x, y } = getCanvasCoordinates(e);
-  if (timeSinceLastTouch < 300 && e.touches.length === 1) {
-    // Find the topmost piece under double touch
-    for (let i = pieces.length - 1; i >= 0; i--) {
-      const p = pieces[i];
-      if (
-        x >= p.x &&
-        x <= p.x + pieceWidth + 2 * overlap &&
-        y >= p.y &&
-        y <= p.y + pieceHeight + 2 * overlap &&
-        !p.placed
-      ) {
-        // Ungroup this piece by assigning a new unique group ID
-        p.group = ++groupIdCounter;
-        draw();
-        break;
-      }
-    }
-  } else if (e.touches.length === 1) {
+//   if (timeSinceLastTouch < 300 && e.touches.length === 1) {
+//     // Find the topmost piece under double touch
+//     for (let i = pieces.length - 1; i >= 0; i--) {
+//       const p = pieces[i];
+//       if (
+//         x >= p.x &&
+//         x <= p.x + pieceWidth + 2 * overlap &&
+//         y >= p.y &&
+//         y <= p.y + pieceHeight + 2 * overlap &&
+//         !p.placed
+//       ) {
+//         // Ungroup this piece by assigning a new unique group ID
+//         p.group = ++groupIdCounter;
+//         draw();
+//         break;
+//       }
+//     }
+//   } else if (e.touches.length === 1) {
     
     startDrag(x, y);
-  }
+//   }
 
-  lastTouchTime = currentTime;
+//   lastTouchTime = currentTime;
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
